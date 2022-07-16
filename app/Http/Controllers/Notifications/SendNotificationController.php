@@ -57,42 +57,52 @@ class SendNotificationController extends Controller
         return "success";
     }
 
+    private function getGoogleAccessToken()
+    {
+
+        $credentialsFilePath = public_path('json/send-notification-63cf4-firebase-adminsdk-gd2oq-aefd6b3715.json');
+        $client = new \Google_Client();
+        $client->setAuthConfig($credentialsFilePath);
+        $client->addScope('https://www.googleapis.com/auth/firebase.messaging');
+        $client->refreshTokenWithAssertion();
+        $token = $client->getAccessToken();
+        return isset($token['access_token']) ? $token['access_token'] : null ;
+   }
+
     private function sendFcm($request, $title, $content)
     {
         /** Google URL with which notifications will be pushed */
-        $url = "https://fcm.googleapis.com/fcm/send";
-        $urlAction = route('notifications.test');
+        $url = "https://fcm.googleapis.com/v1/projects/send-notification-63cf4/messages:send"; 
+
+        $allDevices = DB::table('token')->get();
+        $allDevices = json_decode(json_encode($allDevices), true);
+        $allDevices = array_column($allDevices, 'value');
+   
         $tokenDevice = $request->session()->get('token_device');
-        /** 
-         * Firebase Console -> Select Projects From Top Naviagation 
-         *      -> Left Side bar -> Project Overview -> Project Settings
-         *      -> General -> Scroll Down and you will be able to see KEYS
-         */
-        $subscription_key =  env("SUBSCRIPTION_KEY", "key=AAAAnRE9JQc:APA91bGWCXUifGiMorOwP5-NYjACts6Ig8ZveGuEZE6SaeTptaOl4cBFyfqkDQO1_qSzv7xY8fPK-xDHmUH7rnodiZDXgtDnOZt8ALgw04EEcoY2bRBYBPq-2OiZBau8NXXi_v3BUyP6");
-        /** We will need to set the following header to make request work */
         $request_headers = array(
-            "Authorization:" . $subscription_key,
+            "Authorization: Bearer " . $this->getGoogleAccessToken(),
             "Content-Type: application/json"
         );
 
         /** Data that will be shown when push notifications get triggered */
         $postRequest = [
-            "notification" => [
-                "title" =>  $title,
-                "body" =>  $content,
-                "icon" =>  "https://c.disquscdn.com/uploads/users/34896/2802/avatar92.jpg",
-                "click_action" =>  $urlAction
-            ],
-            /** Customer Token, As of now I got from console. You might need to pull from database */
-            "to" =>  $tokenDevice
+            "message" => [
+                "token" => $tokenDevice,
+                "notification" => [
+                    "title" =>  $title,
+                    "body" =>  $content,
+                ]
+            ]
         ];
 
         /** CURL POST code */
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($postRequest));
+        curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
         curl_setopt($ch, CURLOPT_HTTPHEADER, $request_headers);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($postRequest));
 
         $season_data = curl_exec($ch);
 

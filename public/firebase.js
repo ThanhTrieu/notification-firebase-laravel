@@ -24,11 +24,11 @@ var messaging = firebase.messaging();
 /** Register your service worker here
  *  It starts listening to incoming push notifications from here
  */
-navigator.serviceWorker.register('./firebase-messaging-sw.js')
+navigator.serviceWorker.register('firebase-messaging-sw.js')
 .then(function (registration) {
     /** Since we are using our own service worker ie firebase-messaging-sw.js file */
     messaging.useServiceWorker(registration);
-
+    //console.log(registration);
     /** Lets request user whether we need to send the notifications or not */
     messaging.requestPermission()
         .then(function () {

@@ -21,6 +21,7 @@ firebase.initializeApp(config);
 
 // Retrieve an instance of Firebase Data Messaging so that it can handle background messages.
 const messaging = firebase.messaging();
+console.log(messaging);
 
 /** THIS IS THE MAIN WHICH LISTENS IN BACKGROUND */
 messaging.setBackgroundMessageHandler(function(payload) {
